@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --ground: #0B0C0C;
+    --panel:  #121514;
+    --line:   #262B29;
+    --text:   #E7ECE9;
+    --muted:  #A9B3AD;
+    --mint:   #56E8A4;
+    --mint-dim: rgba(86, 232, 164, 0.13);
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    position: relative;
+    background:
+      radial-gradient(1200px 700px at 78% 22%, rgba(86,232,164,0.06), transparent 60%),
+      var(--ground);
+    font-family: var(--sans);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+  .frame {
+    position: absolute; inset: 0;
+    padding: 72px 88px;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  /* top: wordmark */
+  .brand { display: flex; align-items: center; gap: 22px; }
+  .mark { width: 68px; height: 68px; }
+  .wordmark { font-family: var(--mono); font-size: 44px; font-weight: 700; letter-spacing: -0.02em; }
+  .wordmark em { font-style: normal; font-weight: 500; color: var(--mint); }
+
+  /* middle: the café hero with a reveal box mid-word */
+  .hero { display: flex; align-items: center; gap: 46px; }
+  .word {
+    font-family: var(--mono);
+    font-size: 210px; font-weight: 700; letter-spacing: -0.02em; line-height: 0.9;
+    display: flex; align-items: center;
+  }
+  .reveal {
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 72px; font-weight: 700;
+    color: var(--mint);
+    border: 4px dashed var(--mint);
+    border-radius: 16px;
+    padding: 6px 22px;
+    margin: 0 4px 0 10px;
+    background: var(--mint-dim);
+    box-shadow: 0 0 0 2px rgba(86,232,164,0.35);   /* the single soft mint halo */
+    letter-spacing: 0.02em;
+  }
+  .caption {
+    max-width: 30ch;
+  }
+  .caption h1 {
+    font-size: 46px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.14;
+  }
+  .caption h1 b { color: var(--mint); font-weight: 700; }
+  .caption p {
+    margin-top: 18px; font-size: 26px; color: var(--muted); line-height: 1.36; font-weight: 500;
+    max-width: 22ch;
+  }
+
+  /* bottom: the four-count chips */
+  .chips { display: flex; gap: 16px; }
+  .chip {
+    font-family: var(--mono);
+    border: 1.5px solid var(--line); background: var(--panel);
+    border-radius: 999px; padding: 13px 26px;
+    font-size: 24px; font-weight: 600; color: var(--muted);
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  .chip b { color: var(--mint); font-size: 26px; font-weight: 700; }
+  .chip.hot { border-color: var(--mint); color: var(--mint); }
+</style>
+</head>
+<body>
+  <div class="frame">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="7" fill="#121514"/>
+        <rect x="6" y="6" width="20" height="20" rx="6" fill="none" stroke="#56E8A4" stroke-width="2" stroke-dasharray="4.6 3.4" stroke-linecap="round"/>
+        <circle cx="16" cy="16" r="3" fill="#56E8A4"/>
+      </svg>
+      <span class="wordmark">unicodex <em>explained</em></span>
+    </div>
+
+    <div class="hero">
+      <div class="word" aria-hidden="true">caf<span class="reveal">é</span></div>
+      <div class="caption">
+        <h1>One glyph is <b>not</b> one codepoint is <b>not</b> one byte.</h1>
+        <p>Codepoints, bytes &amp; invisible characters — explained.</p>
+      </div>
+    </div>
+
+    <div class="chips" aria-hidden="true">
+      <span class="chip"><b>1</b> grapheme</span>
+      <span class="chip"><b>7</b> codepoints</span>
+      <span class="chip"><b>11</b> UTF-16</span>
+      <span class="chip"><b>25</b> UTF-8</span>
+      <span class="chip hot">connect-src 'none'</span>
+    </div>
+  </div>
+</body>
+</html>

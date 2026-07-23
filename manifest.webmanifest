@@ -1,0 +1,24 @@
+{
+  "name": "unicodex explained",
+  "short_name": "unicodex explained",
+  "description": "An animated explainer for unicodex, the Unicode character inspector: why one glyph is not one codepoint or one byte, how UTF-8/UTF-16 differ, what NFC/NFD/NFKC/NFKD normalization does, and how invisible and look-alike characters break string matching — all derived live from the browser's own engine.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#0B0C0C",
+  "theme_color": "#0B0C0C",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

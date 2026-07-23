@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'none'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'">
+  <title>Unicode, explained — codepoints, bytes &amp; invisible characters | unicodex</title>
+  <meta name="description" content="An animated walkthrough of why one glyph is not one codepoint or one byte, why your string length is 'wrong', and how invisible and look-alike characters make identical-looking strings refuse to match — the mechanism behind the unicodex character inspector.">
+  <meta name="color-scheme" content="dark light">
+  <link rel="canonical" href="https://sreenivas-sadhu-prabhakara.github.io/unicodex-explained/">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="author" content="Sreenivas Sadhu Prabhakara">
+  <meta name="keywords" content="unicode explained, why is my string length wrong, codepoints vs bytes, grapheme cluster, UTF-8 UTF-16 bytes, invisible characters, zero width space, trojan source RLO, unicode normalization NFC NFD NFKC NFKD, confusable characters, why don't two strings match">
+  <meta name="theme-color" content="#0B0C0C" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F1F6F2" media="(prefers-color-scheme: light)">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="unicodex explained">
+  <meta property="og:title" content="Unicode, explained — codepoints, bytes &amp; invisible characters">
+  <meta property="og:description" content="One glyph is not one codepoint or one byte. An animated explainer of grapheme clusters, UTF-8/UTF-16, normalization and the invisible characters that break string matching — the mechanism behind unicodex.">
+  <meta property="og:url" content="https://sreenivas-sadhu-prabhakara.github.io/unicodex-explained/">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:image" content="https://sreenivas-sadhu-prabhakara.github.io/unicodex-explained/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The word café on near-black with a dashed mint reveal box mid-word, and the wordmark unicodex explained.">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Unicode, explained — codepoints, bytes &amp; invisible characters">
+  <meta name="twitter:description" content="One glyph is not one codepoint or one byte. An animated explainer of grapheme clusters, UTF-8/UTF-16, normalization and the invisible characters that break string matching.">
+  <meta name="twitter:image" content="https://sreenivas-sadhu-prabhakara.github.io/unicodex-explained/og-image.png">
+  <meta name="twitter:image:alt" content="The word café on near-black with a dashed mint reveal box mid-word, and the wordmark unicodex explained.">
+
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+
+  <!-- Structured data (data blocks; not executable script — survives the CSP) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "unicodex explained",
+    "description": "An animated, single-page explainer for unicodex, the Unicode character inspector: why one glyph is not one codepoint or one byte, how UTF-8 and UTF-16 differ, what NFC/NFD/NFKC/NFKD normalization does, and how invisible and look-alike characters make identical-looking strings refuse to match. Every count on the page is derived from the browser's own engine.",
+    "url": "https://sreenivas-sadhu-prabhakara.github.io/unicodex-explained/",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Any (modern web browser)",
+    "browserRequirements": "Requires a modern web browser with JavaScript and Intl.Segmenter.",
+    "isAccessibleForFree": true,
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "license": "https://opensource.org/licenses/MIT",
+    "author": { "@type": "Person", "name": "Sreenivas Sadhu Prabhakara" },
+    "softwareVersion": "0.1.0",
+    "featureList": [
+      "Animated proof that one grapheme is not one codepoint or one byte",
+      "The family emoji broken down: 1 grapheme, 7 codepoints, 11 UTF-16 units, 25 UTF-8 bytes",
+      "Invisible characters revealed as dashed mint reveal boxes (ZWSP, RLO, NBSP)",
+      "The NFC/NFD/NFKC/NFKD normalization diff, explained on real examples",
+      "Why look-alike Cyrillic letters break string equality",
+      "A straight answer to 'why is my string length wrong?'",
+      "Runs 100% offline; CSP blocks all network access"
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Why is my string length wrong?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Because 'length' rarely counts what you see. JavaScript's .length counts UTF-16 code units; Python 3 len() counts codepoints; a byte length counts UTF-8 bytes; and the human 'number of characters' is grapheme clusters. One family emoji is 1 grapheme cluster, 7 codepoints, 11 UTF-16 units and 25 UTF-8 bytes — four different, all correct answers. unicodex shows all four side by side so the mismatch stops being a mystery."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Why don't two identical-looking strings match?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Usually one of three causes. Different normalization: a precomposed é (one codepoint) versus e plus a combining accent (two) look the same but are not === — normalizing both to NFC makes them equal. Invisible characters: a zero-width space, byte-order mark or no-break space hides inside one of them. Or look-alike letters: a Cyrillic а standing in for a Latin a is a genuinely different character and will never be equal, before or after normalization."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is the difference between a grapheme, a codepoint and a byte?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "A grapheme cluster is one 'character' as a human sees and selects it. A codepoint is one Unicode scalar value (U+0041, U+1F600). A byte is one unit of an encoding — UTF-8 uses 1 to 4 bytes per codepoint, UTF-16 uses 1 or 2 code units. A single visible glyph can be several codepoints (é as e + accent, or an emoji built from many codepoints joined by ZERO WIDTH JOINERs), and each codepoint can be several bytes."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does the unicodex page send or store the text I inspect?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. Both this explainer and the unicodex app ship a Content-Security-Policy with connect-src 'none', which makes the browser itself block every network request the page could attempt. There is no server, no account and no analytics. This explainer stores only your theme choice in localStorage; the app keeps optional autosaved input in localStorage on your device, with one-tap clear."
+        }
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="hero">
+    <div class="wrap">
+      <div class="topbar">
+        <div class="brand">
+          <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+            <rect x="1.5" y="1.5" width="29" height="29" rx="7" fill="#0B0C0C"/>
+            <rect x="6" y="6" width="20" height="20" rx="6" fill="none" stroke="#56E8A4" stroke-width="2" stroke-dasharray="4.6 3.4" stroke-linecap="round"/>
+            <circle cx="16" cy="16" r="3" fill="#56E8A4"/>
+          </svg>
+          <span class="brand-name">unicodex <em>explained</em></span>
+        </div>
+        <button type="button" id="theme-toggle" class="theme-toggle" aria-pressed="false">
+          <span class="theme-toggle-icon" aria-hidden="true">◐</span> Theme
+        </button>
+      </div>
+
+      <h1>Unicode, explained — codepoints, bytes &amp; invisible characters, and why your string length is wrong</h1>
+      <p class="lede">
+        One glyph is not one codepoint. One codepoint is not one byte. And two strings that look
+        <em>identical</em> can refuse to match. This page walks through exactly why — with every
+        number derived live from the browser's own engine, the same ground truth the
+        <strong>unicodex</strong> inspector reads.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="https://sreenivas-sadhu-prabhakara.github.io/unicodex/">Open unicodex — inspect your own text</a>
+        <a class="btn btn-ghost" href="#scene-counts">See it below ↓</a>
+      </div>
+      <ul class="hero-chips">
+        <li>grapheme · codepoint · byte</li>
+        <li>NFC / NFD / NFKC / NFKD</li>
+        <li>invisible &amp; look-alike characters</li>
+        <li>offline &amp; private by enforcement</li>
+      </ul>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- ============ SCENE 1 — one glyph ≠ one codepoint ≠ one byte ============ -->
+    <section class="scene" id="scene-counts" aria-labelledby="s1-h">
+      <div class="wrap">
+        <p class="scene-kicker"><span class="scene-num">1</span> The layer confusion</p>
+        <h2 id="s1-h">One glyph is not one codepoint is not one byte</h2>
+        <p class="scene-lede">
+          The question <em>"how long is this string?"</em> has four different, all-correct answers,
+          depending on which layer you count. Here is the same family emoji, counted four ways.
+        </p>
+
+        <figure class="stack card anim" data-replay aria-labelledby="s1-cap">
+          <figcaption class="fig-title" id="s1-cap">
+            <span class="mono glyph-xl" data-fact="family-glyph">👨‍👩‍👧‍👦</span>
+            <span class="fig-note">one family emoji</span>
+          </figcaption>
+
+          <!-- four layers, each grows on scroll -->
+          <div class="layers">
+            <div class="layer s1">
+              <span class="layer-name">grapheme clusters <small>what you see · Intl.Segmenter</small></span>
+              <span class="layer-bar"><span class="lb lb-graph w-graph"></span></span>
+              <output class="layer-num mono" data-count="family.graphemes">1</output>
+            </div>
+            <div class="layer s2">
+              <span class="layer-name">codepoints <small>Python 3 <code>len()</code> · Rust <code>chars()</code></small></span>
+              <span class="layer-bar"><span class="lb lb-cp w-cp"></span></span>
+              <output class="layer-num mono" data-count="family.codepoints">7</output>
+            </div>
+            <div class="layer s3">
+              <span class="layer-name">UTF-16 units <small>JS <code>.length</code> · Java/C# length</small></span>
+              <span class="layer-bar"><span class="lb lb-u16 w-u16"></span></span>
+              <output class="layer-num mono" data-count="family.utf16">11</output>
+            </div>
+            <div class="layer s4">
+              <span class="layer-name">UTF-8 bytes <small>on the wire · DB storage</small></span>
+              <span class="layer-bar"><span class="lb lb-u8 w-u8"></span></span>
+              <output class="layer-num mono" data-count="family.utf8">25</output>
+            </div>
+          </div>
+
+          <p class="fig-foot">
+            The seven codepoints are four faces — 👨 👩 👧 👦 — glued by three invisible
+            <span class="reveal">ZWJ</span> joiners. Strip the joiners and the one glyph falls apart into four.
+            The flag <span class="mono">🇮🇳</span> tells the same story: <span class="mono">1</span> glyph,
+            <span class="mono">2</span> codepoints, <span class="mono">4</span> UTF-16 units.
+          </p>
+          <button type="button" class="btn btn-small replay-btn" data-replay-btn hidden>↻ Replay</button>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ============ SCENE 2 — invisible characters revealed ============ -->
+    <section class="scene scene-alt" id="scene-invisible" aria-labelledby="s2-h">
+      <div class="wrap">
+        <p class="scene-kicker"><span class="scene-num">2</span> The characters you can't see</p>
+        <h2 id="s2-h">Invisible characters, revealed</h2>
+        <p class="scene-lede">
+          Some codepoints have no visible glyph at all. They copy-paste silently, break exact matching,
+          and — in one nasty case — reorder text on screen without changing a single byte. unicodex's motif
+          is the <strong>reveal box</strong>: a dashed mint frame that makes the invisible visible, its
+          abbreviation set in monospace inside.
+        </p>
+
+        <div class="reveal-grid anim">
+          <figure class="card reveal-card r1">
+            <div class="rc-demo mono">
+              Hi<span class="reveal reveal--active">ZWSP</span>there
+            </div>
+            <figcaption>
+              <h3>ZERO WIDTH SPACE <span class="cp mono">U+200B</span></h3>
+              <p>Zero pixels wide. <span class="mono">"Hi​there"</span> looks like one word but is eight codepoints,
+              and never equals <span class="mono">"Hithere"</span>. It hides in copied IDs, URLs and code.</p>
+            </figcaption>
+          </figure>
+
+          <figure class="card reveal-card r2">
+            <div class="rc-demo mono">
+              invoice_<span class="reveal">RLO</span>gnp.exe
+            </div>
+            <figcaption>
+              <h3>RIGHT-TO-LEFT OVERRIDE <span class="cp mono">U+202E</span></h3>
+              <p>Flips display order. The bytes read <span class="mono">invoice_gnp.exe</span>, but the screen shows
+              <span class="mono">invoice_exe.png</span> — the <em>Trojan Source</em> class of trick, in filenames and source code alike.</p>
+            </figcaption>
+          </figure>
+
+          <figure class="card reveal-card r3">
+            <div class="rc-demo mono">
+              Save<span class="reveal">NBSP</span>₹500
+            </div>
+            <figcaption>
+              <h3>NO-BREAK SPACE <span class="cp mono">U+00A0</span></h3>
+              <p>Looks exactly like a space, isn't one. Word-splitting and exact string matching both fail on it,
+              and a leading <span class="reveal reveal--inline">BOM</span> (U+FEFF) can make a parser reject valid JSON.</p>
+            </figcaption>
+          </figure>
+        </div>
+        <p class="scene-foot">
+          Paste any of these into unicodex and every flagged character is revealed inline in its own box —
+          with its Unicode name, a one-line risk note and a citation to the document that defines it.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ SCENE 3 — normalization diff ============ -->
+    <section class="scene" id="scene-normalize" aria-labelledby="s3-h">
+      <div class="wrap">
+        <p class="scene-kicker"><span class="scene-num">3</span> The same text, four ways</p>
+        <h2 id="s3-h">Normalization — NFC · NFD · NFKC · NFKD</h2>
+        <p class="scene-lede">
+          Unicode lets the "same" text be encoded more than one way. Normalization collapses those to a single
+          canonical form so comparisons work. There are two axes: <strong>canonical</strong> (NFC/NFD — same
+          appearance) versus <strong>compatibility</strong> (NFKC/NFKD — same meaning, may change appearance).
+        </p>
+
+        <div class="norm-cards anim">
+          <figure class="card norm-card n1">
+            <div class="nc-head">
+              <span class="mono nc-word">caf<span class="reveal reveal--tight">é</span></span>
+              <span class="nc-tag">canonical · NFC ↔ NFD</span>
+            </div>
+            <div class="nc-diff">
+              <div class="nc-row"><span class="nc-form mono">NFD</span><span class="mono">c a f e ◌́</span><span class="nc-n mono" data-count="cafeNfd.codepoints">5</span> <small>codepoints</small></div>
+              <div class="nc-row"><span class="nc-form mono">NFC</span><span class="mono">c a f é</span><span class="nc-n mono" data-count="cafeNfc.codepoints">4</span> <small>codepoints</small></div>
+            </div>
+            <p class="nc-note">These two look <em>pixel-identical</em>. One is <span class="mono">é</span> (a single codepoint);
+            the other is <span class="mono">e</span> + a combining acute accent. They fail <span class="mono">===</span> —
+            but normalize both to NFC and they're equal.</p>
+          </figure>
+
+          <figure class="card norm-card n2">
+            <div class="nc-head">
+              <span class="mono nc-word"><span class="reveal reveal--tight">ﬁ</span>le</span>
+              <span class="nc-tag">compatibility · NFKC / NFKD</span>
+            </div>
+            <div class="nc-diff">
+              <div class="nc-row"><span class="nc-form mono">input</span><span class="mono">ﬁ l e</span><span class="nc-n mono" data-count="fileLig.codepoints">3</span> <small>codepoints</small></div>
+              <div class="nc-row"><span class="nc-form mono">NFKC</span><span class="mono" data-fact="fileLig.nfkc">file</span><span class="nc-n mono">4</span> <small>codepoints</small></div>
+            </div>
+            <p class="nc-note">The single ligature codepoint <span class="mono">ﬁ</span> (U+FB01) survives NFC untouched —
+            but <em>compatibility</em> normalization decomposes it to plain <span class="mono">f</span> + <span class="mono">i</span>.
+            Great for search; lossy for round-tripping.</p>
+          </figure>
+        </div>
+        <p class="scene-foot">
+          unicodex shows all four forms of your input at once and marks which ones <em>changed</em> — so you can
+          see, for any string, whether a normalization mismatch is what's breaking your comparison.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ SCENE 4 — confusables ============ -->
+    <section class="scene scene-alt" id="scene-confusable" aria-labelledby="s4-h">
+      <div class="wrap">
+        <p class="scene-kicker"><span class="scene-num">4</span> Letters that lie</p>
+        <h2 id="s4-h">Look-alikes — when a letter isn't the letter</h2>
+        <p class="scene-lede">
+          Different alphabets contain characters drawn the same. Swap a couple in and you get a word that reads
+          perfectly but is, byte-for-byte, something else entirely — the basis of homograph phishing domains.
+        </p>
+
+        <figure class="card confuse anim" aria-labelledby="s4-cap">
+          <figcaption class="fig-title" id="s4-cap">Two words. Your eyes say equal. The bytes say no.</figcaption>
+          <div class="confuse-rows">
+            <div class="confuse-row cr1">
+              <span class="cr-label">Latin</span>
+              <span class="mono cr-word">paypal</span>
+              <span class="cr-cps mono">70 61 79 70 61 6C</span>
+            </div>
+            <div class="confuse-row cr2">
+              <span class="cr-label">Cyrillic spoof</span>
+              <span class="mono cr-word"><span class="cr-hot">р</span><span class="cr-hot">а</span>ypal</span>
+              <span class="cr-cps mono"><span class="cr-hot">440</span> <span class="cr-hot">430</span> 79 70 61 6C</span>
+            </div>
+            <div class="confuse-verdict cr3" role="note">
+              <span class="cv-mark mono">raw ===</span>
+              <span class="cv-no">✗ never equal</span>
+              <span class="cv-mark mono">after NFC</span>
+              <span class="cv-no">✗ still not equal</span>
+            </div>
+          </div>
+          <p class="fig-foot">
+            The first two letters are <strong>Cyrillic</strong> er (<span class="mono">U+0440</span>) and a
+            (<span class="mono">U+0430</span>) — genuinely different letters, not a normalization difference.
+            No amount of normalizing will ever make them match the Latin word, which is exactly why the flag matters.
+            <span class="reveal reveal--inline">CONFUSABLE</span>
+          </p>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ============ SCENE 5 — why string length is wrong ============ -->
+    <section class="scene" id="scene-length" aria-labelledby="s5-h">
+      <div class="wrap">
+        <p class="scene-kicker"><span class="scene-num">5</span> The straight answer</p>
+        <h2 id="s5-h">So, why is my string length wrong?</h2>
+        <p class="scene-lede">
+          It isn't wrong. Every layer is telling the truth about a <em>different</em> thing — and the tool you're
+          using picked one for you. Here's who counts what, on that one family emoji.
+        </p>
+
+        <div class="who-counts anim">
+          <div class="wc-row wc1">
+            <span class="wc-tool mono">JS <span class="wc-lit">"👨‍👩‍👧‍👦".length</span></span>
+            <span class="wc-eq mono">→ <b data-count="family.utf16">11</b></span>
+            <span class="wc-what">UTF-16 code units</span>
+          </div>
+          <div class="wc-row wc2">
+            <span class="wc-tool mono">Python <span class="wc-lit">len("👨‍👩‍👧‍👦")</span></span>
+            <span class="wc-eq mono">→ <b data-count="family.codepoints">7</b></span>
+            <span class="wc-what">codepoints</span>
+          </div>
+          <div class="wc-row wc3">
+            <span class="wc-tool mono">Go <span class="wc-lit">len("👨‍👩‍👧‍👦")</span></span>
+            <span class="wc-eq mono">→ <b data-count="family.utf8">25</b></span>
+            <span class="wc-what">UTF-8 bytes</span>
+          </div>
+          <div class="wc-row wc4">
+            <span class="wc-tool mono">a human <span class="wc-lit">"how many characters?"</span></span>
+            <span class="wc-eq mono">→ <b data-count="family.graphemes">1</b></span>
+            <span class="wc-what">grapheme cluster</span>
+          </div>
+        </div>
+        <p class="scene-foot">
+          Four answers, all correct, none of them a bug. The fix is never to argue with the number — it's to
+          know <em>which</em> number you have. unicodex lays all four in front of you for any text you paste,
+          then shows the codepoints and bytes that produced them.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ PRIVACY ============ -->
+    <section class="scene scene-alt" id="privacy" aria-labelledby="priv-h">
+      <div class="wrap">
+        <p class="scene-kicker"><span class="scene-num">✓</span> Private by construction</p>
+        <h2 id="priv-h">The text you inspect never leaves your browser</h2>
+        <p class="scene-lede">
+          You paste sensitive things into a character inspector — tokens, keys, private messages. Both this page
+          and unicodex ship a policy that makes the <strong>browser itself</strong> refuse to send them anywhere.
+        </p>
+        <div class="privacy-wrap">
+          <pre class="csp-block"><code>default-src 'self'; <strong>connect-src 'none'</strong></code></pre>
+          <ul class="check-list">
+            <li><strong>No network calls are possible</strong> — <code>fetch</code>, XHR and WebSockets are refused by the browser, by policy, not by promise.</li>
+            <li><strong>No server, no account, no analytics</strong> — nothing to log in to, nothing watching.</li>
+            <li><strong>No external fonts, scripts or images</strong> — everything is same-origin or a <code>data:</code> URI.</li>
+            <li><strong>Local only</strong> — this explainer stores just your theme choice; unicodex keeps optional autosaved input in <code>localStorage</code>, with one-tap clear.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ HONEST LIMITS ============ -->
+    <section class="scene" id="limits" aria-labelledby="lim-h">
+      <div class="wrap">
+        <p class="scene-kicker"><span class="scene-num">!</span> What this honestly is not</p>
+        <h2 id="lim-h">Honest limits</h2>
+        <ul class="limits-list">
+          <li><strong>Counts are the host engine's.</strong> Grapheme segmentation follows <em>this</em> browser's <code>Intl.Segmenter</code> and its Unicode version — older engines can split Indic conjuncts differently. unicodex reports the engine's answer, not a universal truth.</li>
+          <li><strong>Not a security verdict.</strong> The confusable and invisible-character catalogs are curated subsets — the <em>absence</em> of a flag is never proof a string is safe, and unicodex never says "safe".</li>
+          <li><strong>Rendering ≠ identity.</strong> A glyph shown here may draw as tofu or differently on your device fonts. This is about what text <em>is</em>, not how any screen draws it.</li>
+          <li><strong>Approachable, not exhaustive.</strong> This page teaches the mechanism with a handful of examples; Unicode is far larger. Use the live app to inspect your own real strings.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ CTA ============ -->
+    <section class="scene cta-section" id="cta" aria-labelledby="cta-h">
+      <div class="wrap cta-inner">
+        <h2 id="cta-h">Paste your own string. Watch it come apart.</h2>
+        <p>Free, offline, MIT-licensed. Every codepoint, byte and invisible character — revealed in your own browser, sent nowhere.</p>
+        <a class="btn btn-primary btn-big" href="https://sreenivas-sadhu-prabhakara.github.io/unicodex/">Open unicodex →</a>
+        <p class="cta-sub"><a href="https://github.com/Sreenivas-Sadhu-Prabhakara/unicodex">unicodex source on GitHub</a></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p><strong>Disclaimer.</strong> This explainer and the unicodex app are informational developer tools provided
+      "as is", without warranty of any kind. Character counts and normalization come from your browser's engine and can
+      differ across engines and Unicode versions; the flagged-character catalogs are curated subsets, so the absence of a
+      warning is never proof that text is safe. Neither tool issues a security verdict. Verify anything important yourself.</p>
+      <p>Every number on this page is derived live from your browser's own <code>TextEncoder</code>,
+      <code>Intl.Segmenter</code> and <code>String.normalize</code>; the page makes no network requests
+      (<code>connect-src 'none'</code>) and stores only your theme choice locally.</p>
+      <p><a href="https://sreenivas-sadhu-prabhakara.github.io/unicodex/">unicodex app</a> ·
+        <a href="https://github.com/Sreenivas-Sadhu-Prabhakara/unicodex-explained">this page's source</a> ·
+        MIT License © 2026 Sreenivas Sadhu Prabhakara</p>
+    </div>
+  </footer>
+
+  <script src="data/facts.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
